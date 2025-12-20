@@ -45,10 +45,10 @@ dependencies {
     implementation("org.xerial:sqlite-jdbc:3.44.1.0")
     implementation("com.h2database:h2:2.2.224")
     implementation("org.mariadb.jdbc:mariadb-java-client:3.3.1")
-    implementation("mysql:mysql-connector-java:8.0.33")
+    implementation("com.mysql:mysql-connector-j:9.5.0")
     implementation("com.oracle.database.jdbc:ojdbc8:12.2.0.1")
-    implementation("org.postgresql:postgresql:42.7.5")
-    implementation("com.microsoft.sqlserver:mssql-jdbc:9.4.1.jre8")
+    implementation("org.postgresql:postgresql:42.7.7")
+    implementation("com.microsoft.sqlserver:mssql-jdbc:13.2.1.jre11")
     implementation("io.github.sakethpathike:kapsule:0.1.2")
     implementation("org.jetbrains:markdown:0.7.3")
 
