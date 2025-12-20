@@ -48,7 +48,7 @@ class FoldersRepoImpl(private val panelsRepo: PanelsRepo) : FoldersRepo {
                             message = "Folder created successfully with id = $it", eventTimestamp = eventTimestamp
                         ), id = it, correlation = addFolderDTO.correlation
                     ), webSocketEvent = WebSocketEvent(
-                        operation = Route.Folder.CREATE_FOLDER.name,
+                        operation = Route.CREATE_FOLDER.name,
                         payload = Json.encodeToJsonElement(
                             FolderDTO(
                                 id = it,
@@ -89,7 +89,7 @@ class FoldersRepoImpl(private val panelsRepo: PanelsRepo) : FoldersRepo {
                     response = TimeStampBasedResponse(
                         message = "Folder updated successfully.", eventTimestamp = eventTimestamp
                     ), webSocketEvent = WebSocketEvent(
-                        operation = Route.Folder.UPDATE_FOLDER.name,
+                        operation = Route.UPDATE_FOLDER.name,
                         payload = Json.encodeToJsonElement(folderDTO.copy(eventTimestamp = eventTimestamp)),
                     )
                 )
@@ -137,7 +137,7 @@ class FoldersRepoImpl(private val panelsRepo: PanelsRepo) : FoldersRepo {
                 }
                 TombStoneHelper.insert(
                     payload = Json.encodeToString(idBasedDTO.copy(eventTimestamp = eventTimestamp)),
-                    operation = Route.Folder.DELETE_FOLDER.name,
+                    operation = Route.DELETE_FOLDER.name,
                     eventTimestamp
                 )
             }
@@ -145,7 +145,7 @@ class FoldersRepoImpl(private val panelsRepo: PanelsRepo) : FoldersRepo {
                 response = TimeStampBasedResponse(
                     message = "Folder and its contents have been successfully deleted.", eventTimestamp = eventTimestamp
                 ), webSocketEvent = WebSocketEvent(
-                    operation = Route.Folder.DELETE_FOLDER.name,
+                    operation = Route.DELETE_FOLDER.name,
                     payload = Json.encodeToJsonElement(idBasedDTO.copy(eventTimestamp = eventTimestamp)),
                 )
             )
@@ -244,7 +244,7 @@ class FoldersRepoImpl(private val panelsRepo: PanelsRepo) : FoldersRepo {
                     response = TimeStampBasedResponse(
                         eventTimestamp = eventTimestamp, message = "Number of rows affected by the update = $it"
                     ), webSocketEvent = WebSocketEvent(
-                        operation = Route.Folder.MARK_FOLDER_AS_ARCHIVE.name,
+                        operation = Route.MARK_FOLDER_AS_ARCHIVE.name,
                         payload = Json.encodeToJsonElement(idBasedDTO.copy(eventTimestamp = eventTimestamp)),
                     )
                 )
@@ -273,7 +273,7 @@ class FoldersRepoImpl(private val panelsRepo: PanelsRepo) : FoldersRepo {
                     response = TimeStampBasedResponse(
                         eventTimestamp = eventTimestamp, message = "Number of rows affected by the update = $it"
                     ), webSocketEvent = WebSocketEvent(
-                        operation = Route.Folder.MARK_AS_REGULAR_FOLDER.name,
+                        operation = Route.MARK_AS_REGULAR_FOLDER.name,
                         payload = Json.encodeToJsonElement(idBasedDTO.copy(eventTimestamp = eventTimestamp)),
                     )
                 )
@@ -309,7 +309,7 @@ class FoldersRepoImpl(private val panelsRepo: PanelsRepo) : FoldersRepo {
                     response = TimeStampBasedResponse(
                         eventTimestamp = eventTimestamp, message = "Number of rows affected by the update = $it"
                     ), webSocketEvent = WebSocketEvent(
-                        operation = Route.Folder.UPDATE_FOLDER_NAME.name,
+                        operation = Route.UPDATE_FOLDER_NAME.name,
                         payload = Json.encodeToJsonElement(updateFolderNameDTO.copy(eventTimestamp = eventTimestamp)),
                     )
                 )
@@ -339,7 +339,7 @@ class FoldersRepoImpl(private val panelsRepo: PanelsRepo) : FoldersRepo {
                     response = TimeStampBasedResponse(
                         message = "Number of rows affected by the update = $it", eventTimestamp = eventTimestamp
                     ), webSocketEvent = WebSocketEvent(
-                        operation = Route.Folder.UPDATE_FOLDER_NOTE.name,
+                        operation = Route.UPDATE_FOLDER_NOTE.name,
                         payload = Json.encodeToJsonElement(updateFolderNoteDTO.copy(eventTimestamp = eventTimestamp)),
                     )
                 )
@@ -362,7 +362,7 @@ class FoldersRepoImpl(private val panelsRepo: PanelsRepo) : FoldersRepo {
                     response = TimeStampBasedResponse(
                         eventTimestamp = eventTimestamp, message = "Number of rows affected by the update = $it"
                     ), webSocketEvent = WebSocketEvent(
-                        operation = Route.Folder.DELETE_FOLDER_NOTE.name,
+                        operation = Route.DELETE_FOLDER_NOTE.name,
                         payload = Json.encodeToJsonElement(idBasedDTO.copy(eventTimestamp = eventTimestamp)),
                     )
                 )
@@ -392,7 +392,7 @@ class FoldersRepoImpl(private val panelsRepo: PanelsRepo) : FoldersRepo {
                     response = TimeStampBasedResponse(
                         eventTimestamp = eventTimeStamp, message = "Marked $it folders as root."
                     ), webSocketEvent = WebSocketEvent(
-                        operation = Route.Folder.MARK_FOLDERS_AS_ROOT.name,
+                        operation = Route.MARK_FOLDERS_AS_ROOT.name,
                         payload = Json.encodeToJsonElement(markSelectedFoldersAsRootDTO.copy(eventTimestamp = eventTimeStamp))
                     )
                 )

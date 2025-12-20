@@ -44,7 +44,7 @@ class TagsRepoImpl : TagsRepo {
                             message = "Tag created successfully with the id = $newTagId",
                         ), correlation = createTagDTO.correlation
                     ), webSocketEvent = WebSocketEvent(
-                        operation = Route.Tag.CREATE_TAG.name, payload = Json.encodeToJsonElement(
+                        operation = Route.CREATE_TAG.name, payload = Json.encodeToJsonElement(
                             TagDTO(
                                 id = newTagId,
                                 name = createTagDTO.name,
@@ -76,7 +76,7 @@ class TagsRepoImpl : TagsRepo {
                 response = TimeStampBasedResponse(
                     eventTimestamp = evenTimeStamp, message = "Tag renamed to ${renameTagDTO.newName}"
                 ), webSocketEvent = WebSocketEvent(
-                    operation = Route.Tag.RENAME_TAG.name,
+                    operation = Route.RENAME_TAG.name,
                     payload = Json.encodeToJsonElement(renameTagDTO.copy(eventTimestamp = evenTimeStamp))
                 )
             )
@@ -89,7 +89,7 @@ class TagsRepoImpl : TagsRepo {
             transaction {
                 TombStoneHelper.insert(
                     payload = Json.encodeToString(idBasedDTO.copy(eventTimestamp = eventTimestamp)),
-                    operation = Route.Tag.DELETE_TAG.name,
+                    operation = Route.DELETE_TAG.name,
                     deletedAt = eventTimestamp
                 )
                 TagsTable.deleteWhere {
@@ -100,7 +100,7 @@ class TagsRepoImpl : TagsRepo {
                 response = TimeStampBasedResponse(
                     eventTimestamp = eventTimestamp, message = "Tag has been deleted."
                 ), webSocketEvent = WebSocketEvent(
-                    operation = Route.Tag.DELETE_TAG.name,
+                    operation = Route.DELETE_TAG.name,
                     payload = Json.encodeToJsonElement(idBasedDTO.copy(eventTimestamp = eventTimestamp))
                 )
             )

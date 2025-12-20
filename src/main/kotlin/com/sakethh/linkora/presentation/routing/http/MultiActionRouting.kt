@@ -14,19 +14,19 @@ import io.ktor.server.routing.*
 
 fun Routing.multiActionRouting(multiActionRepo: MultiActionRepo) {
     authenticate {
-        post<ArchiveMultipleItemsDTO>(Route.MultiAction.ARCHIVE_MULTIPLE_ITEMS.name) {
+        post<ArchiveMultipleItemsDTO>(Route.ARCHIVE_MULTIPLE_ITEMS.name) {
             respondWithResult(multiActionRepo.archiveMultipleItems(it))
         }
-        post<DeleteMultipleItemsDTO>(Route.MultiAction.DELETE_MULTIPLE_ITEMS.name) {
+        post<DeleteMultipleItemsDTO>(Route.DELETE_MULTIPLE_ITEMS.name) {
             respondWithResult(multiActionRepo.deleteMultipleItems(it))
         }
-        post<MoveItemsDTO>(Route.MultiAction.MOVE_EXISTING_ITEMS.name) {
+        post<MoveItemsDTO>(Route.MOVE_EXISTING_ITEMS.name) {
             respondWithResult(multiActionRepo.moveMultipleItems(it))
         }
-        post<CopyItemsDTO>(Route.MultiAction.COPY_EXISTING_ITEMS.name) {
+        post<CopyItemsDTO>(Route.COPY_EXISTING_ITEMS.name) {
             respondWithResult(multiActionRepo.copyMultipleItems(it))
         }
-        post<MarkItemsRegularDTO>(Route.MultiAction.UNARCHIVE_MULTIPLE_ITEMS.name) {
+        post<MarkItemsRegularDTO>(Route.UNARCHIVE_MULTIPLE_ITEMS.name) {
             respondWithResult(multiActionRepo.markItemsAsRegular(it))
         }
     }

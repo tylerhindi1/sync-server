@@ -178,7 +178,7 @@ class SyncRepoImpl : SyncRepo {
             }
             Result.Success(
                 response = Unit, webSocketEvent = WebSocketEvent(
-                    operation = Route.Sync.DELETE_EVERYTHING.name,
+                    operation = Route.DELETE_EVERYTHING.name,
                     payload = Json.encodeToJsonElement(deleteEverythingDTO.copy(eventTimestamp = eventTimestamp))
                 )
             )

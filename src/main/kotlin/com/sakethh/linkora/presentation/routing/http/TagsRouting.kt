@@ -11,16 +11,16 @@ import io.ktor.server.routing.*
 
 fun Routing.tagsRouting(tagsRepo: TagsRepo) {
     authenticate {
-        post<CreateTagDTO>(path = Route.Tag.CREATE_TAG.name) {
+        post<CreateTagDTO>(path = Route.CREATE_TAG.name) {
             respondWithResult(tagsRepo.createATag(it))
         }
-        post<RenameTagDTO>(path = Route.Tag.RENAME_TAG.name) {
+        post<RenameTagDTO>(path = Route.RENAME_TAG.name) {
             respondWithResult(tagsRepo.renameATag(it))
         }
-        post<IDBasedDTO>(path = Route.Tag.DELETE_TAG.name) {
+        post<IDBasedDTO>(path = Route.DELETE_TAG.name) {
             respondWithResult(tagsRepo.deleteATag(it))
         }
-        get(path = Route.Tag.GET_TAGS.name) {
+        get(path = Route.GET_TAGS.name) {
             respondWithResult(tagsRepo.getTags())
         }
     }

@@ -12,7 +12,7 @@ import io.ktor.server.routing.*
 
 fun Routing.syncRouting(syncRepo: SyncRepo) {
     authenticate {
-        get(Route.Sync.GET_TOMBSTONES.name) {
+        get(Route.GET_TOMBSTONES.name) {
             val eventTimestamp = getTimeStampFromParam() ?: return@get
             try {
                 call.respond(syncRepo.getTombstonesAfter(eventTimestamp))
@@ -22,7 +22,7 @@ fun Routing.syncRouting(syncRepo: SyncRepo) {
             }
         }
 
-        get(Route.Sync.GET_UPDATES.name) {
+        get(Route.GET_UPDATES.name) {
             val eventTimestamp = getTimeStampFromParam() ?: return@get
             try {
                 call.respond(syncRepo.getUpdatesAfter(eventTimestamp))
@@ -32,7 +32,7 @@ fun Routing.syncRouting(syncRepo: SyncRepo) {
             }
         }
 
-        post<DeleteEverythingDTO>(Route.Sync.DELETE_EVERYTHING.name) {
+        post<DeleteEverythingDTO>(Route.DELETE_EVERYTHING.name) {
             respondWithResult(syncRepo.deleteEverything(it))
         }
     }

@@ -75,7 +75,7 @@ class MultiActionRepoImpl(
                 response = TimeStampBasedResponse(
                     eventTimestamp = eventTimestamp, message = "Archived $updatedRowsCount items."
                 ), webSocketEvent = WebSocketEvent(
-                    operation = Route.MultiAction.ARCHIVE_MULTIPLE_ITEMS.name,
+                    operation = Route.ARCHIVE_MULTIPLE_ITEMS.name,
                     payload = Json.encodeToJsonElement(archiveMultipleItemsDTO.copy(eventTimestamp = eventTimestamp))
                 )
             )
@@ -99,7 +99,7 @@ class MultiActionRepoImpl(
             transaction {
                 TombStoneHelper.insert(
                     payload = Json.encodeToString(deleteMultipleItemsDTO.copy(eventTimestamp = eventTimestamp)),
-                    operation = Route.MultiAction.DELETE_MULTIPLE_ITEMS.name,
+                    operation = Route.DELETE_MULTIPLE_ITEMS.name,
                     deletedAt = eventTimestamp
                 )
 
@@ -111,7 +111,7 @@ class MultiActionRepoImpl(
                 response = TimeStampBasedResponse(
                     eventTimestamp = eventTimestamp, message = "Deleted."
                 ), webSocketEvent = WebSocketEvent(
-                    operation = Route.MultiAction.DELETE_MULTIPLE_ITEMS.name,
+                    operation = Route.DELETE_MULTIPLE_ITEMS.name,
                     payload = Json.encodeToJsonElement(deleteMultipleItemsDTO.copy(eventTimestamp = eventTimestamp))
                 )
             )
@@ -155,7 +155,7 @@ class MultiActionRepoImpl(
                 response = TimeStampBasedResponse(
                     message = "Number of rows affected by the update = $rowsUpdated", eventTimestamp = eventTimestamp
                 ), webSocketEvent = WebSocketEvent(
-                    operation = Route.MultiAction.MOVE_EXISTING_ITEMS.name,
+                    operation = Route.MOVE_EXISTING_ITEMS.name,
                     payload = Json.encodeToJsonElement(
                         moveItemsDTO.copy(
                             eventTimestamp = eventTimestamp
@@ -301,7 +301,7 @@ class MultiActionRepoImpl(
                     correlation = copyItemsDTO.correlation,
                     eventTimestamp = eventTimestamp
                 ), webSocketEvent = WebSocketEvent(
-                    operation = Route.MultiAction.COPY_EXISTING_ITEMS.name, payload = Json.encodeToJsonElement(
+                    operation = Route.COPY_EXISTING_ITEMS.name, payload = Json.encodeToJsonElement(
                         CopyItemsSocketResponseDTO(
                             eventTimestamp = eventTimestamp, correlation = copyItemsDTO.correlation
                         )
@@ -372,7 +372,7 @@ class MultiActionRepoImpl(
                     response = TimeStampBasedResponse(
                         eventTimestamp = eventTimestamp, message = "Unarchived $it items."
                     ), webSocketEvent = WebSocketEvent(
-                        operation = Route.MultiAction.UNARCHIVE_MULTIPLE_ITEMS.name,
+                        operation = Route.UNARCHIVE_MULTIPLE_ITEMS.name,
                         payload = Json.encodeToJsonElement(markItemsRegularDTO.copy(eventTimestamp = eventTimestamp))
                     )
                 )

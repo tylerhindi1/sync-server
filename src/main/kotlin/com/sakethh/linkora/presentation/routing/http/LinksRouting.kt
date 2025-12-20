@@ -11,59 +11,59 @@ import io.ktor.server.routing.*
 
 fun Routing.linksRouting(linksRepo: LinksRepo) {
     authenticate {
-        post<AddLinkDTO>(Route.Link.CREATE_A_NEW_LINK.name) {
+        post<AddLinkDTO>(Route.CREATE_A_NEW_LINK.name) {
             respondWithResult(linksRepo.createANewLink(it))
         }
 
-        post<IDBasedDTO>(Route.Link.DELETE_A_LINK.name) {
+        post<IDBasedDTO>(Route.DELETE_A_LINK.name) {
             respondWithResult(linksRepo.deleteALink(it))
         }
 
-        post<UpdateLinkedFolderIDDto>(Route.Link.UPDATE_LINKED_FOLDER_ID.name) {
+        post<UpdateLinkedFolderIDDto>(Route.UPDATE_LINKED_FOLDER_ID.name) {
             respondWithResult(
                 linksRepo.updateLinkedFolderIdOfALink(it)
             )
         }
 
-        post<UpdateTitleOfTheLinkDTO>(Route.Link.UPDATE_LINK_TITLE.name) {
+        post<UpdateTitleOfTheLinkDTO>(Route.UPDATE_LINK_TITLE.name) {
             respondWithResult(
                 linksRepo.updateTitleOfTheLink(it)
             )
         }
 
-        post<UpdateNoteOfALinkDTO>(Route.Link.UPDATE_LINK_NOTE.name) {
+        post<UpdateNoteOfALinkDTO>(Route.UPDATE_LINK_NOTE.name) {
             respondWithResult(
                 linksRepo.updateNote(it)
             )
         }
 
-        post<UpdateLinkUserAgentDTO>(Route.Link.UPDATE_USER_AGENT.name) {
+        post<UpdateLinkUserAgentDTO>(Route.UPDATE_USER_AGENT.name) {
             respondWithResult(
                 linksRepo.updateUserAgent(it)
             )
         }
 
-        post<IDBasedDTO>(Route.Link.ARCHIVE_LINK.name) {
+        post<IDBasedDTO>(Route.ARCHIVE_LINK.name) {
             respondWithResult(linksRepo.archiveALink(it))
         }
 
-        post<IDBasedDTO>(Route.Link.UNARCHIVE_LINK.name) {
+        post<IDBasedDTO>(Route.UNARCHIVE_LINK.name) {
             respondWithResult(linksRepo.unArchiveALink(it))
         }
 
-        post<IDBasedDTO>(Route.Link.MARK_AS_IMP.name) {
+        post<IDBasedDTO>(Route.MARK_AS_IMP.name) {
             respondWithResult(linksRepo.markALinkAsImp(it))
         }
 
-        post<IDBasedDTO>(Route.Link.UNMARK_AS_IMP.name) {
+        post<IDBasedDTO>(Route.UNMARK_AS_IMP.name) {
             respondWithResult(linksRepo.markALinkAsNonImp(it))
         }
 
-        post<LinkDTO>(Route.Link.UPDATE_LINK.name) {
+        post<LinkDTO>(Route.UPDATE_LINK.name) {
             respondWithResult(linksRepo.updateLink(it))
         }
 
-        post<DeleteDuplicateLinksDTO>(Route.Link.DELETE_DUPLICATE_LINKS.name) {
+        post<DeleteDuplicateLinksDTO>(Route.DELETE_DUPLICATE_LINKS.name) {
             respondWithResult(linksRepo.deleteDuplicateLinks(it))
         }
     }

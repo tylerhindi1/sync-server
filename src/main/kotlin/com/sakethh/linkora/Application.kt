@@ -265,11 +265,4 @@ fun Application.module() {
         maxFrameSize = Long.MAX_VALUE
     }
     configureEventsWebSocket()
-    val serverConfiguredPage = "https://" + (hostIp?.hostAddress
-        ?: localhost?.hostAddress) + ":" + serverConfig.httpsPort + "/" + Route.Sync.SERVER_IS_CONFIGURED.name
-    if (useSysEnvValues().not() && Desktop.isDesktopSupported() && Desktop.getDesktop()
-            .isSupported(Desktop.Action.BROWSE)
-    ) {
-        Desktop.getDesktop().browse(URI(serverConfiguredPage))
-    }
 }
