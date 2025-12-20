@@ -1,13 +1,11 @@
 package com.sakethh.linkora
 
 import com.sakethh.linkora.data.configureDatabase
-import com.sakethh.linkora.data.repository.MarkdownManagerRepoImpl
-import com.sakethh.linkora.domain.Route
 import com.sakethh.linkora.domain.model.ServerConfig
-import com.sakethh.linkora.domain.repository.MarkdownManagerRepo
 import com.sakethh.linkora.presentation.routing.configureRouting
 import com.sakethh.linkora.presentation.routing.websocket.configureEventsWebSocket
 import com.sakethh.linkora.utils.SysEnvKey
+import com.sakethh.linkora.utils.tryAndCatch
 import com.sakethh.linkora.utils.useSysEnvValues
 import io.ktor.http.*
 import io.ktor.network.tls.certificates.*
@@ -19,14 +17,15 @@ import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.websocket.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.awt.Desktop
+import java.awt.SystemTray
+import java.awt.Toolkit
+import java.awt.TrayIcon
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.FileWriter
 import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.NetworkInterface
-import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
@@ -35,6 +34,7 @@ import java.util.*
 import javax.security.auth.x500.X500Principal
 import kotlin.io.path.exists
 import kotlin.time.Duration.Companion.seconds
+
 
 fun main() {
     val serverConfig = ServerConfiguration.readConfig()
@@ -47,22 +47,23 @@ fun main() {
     ServerConfiguration.exportSignedCertificates(serverKeyStore)
     embeddedServer(
         factory = Netty, configure = {
-        sslConnector(builder = {
-            this.port = serverConfig.httpsPort
-            this.host = serverConfig.serverHost
-            enabledProtocols = listOf("TLSv1.3", "TLSv1.2")
-        }, keyStore = serverKeyStore, keyAlias = Constants.KEY_STORE_ALIAS, keyStorePassword = {
-            serverConfig.keyStorePassword.toCharArray()
-        }, privateKeyPassword = {
-            serverConfig.keyStorePassword.toCharArray()
-        })
+            sslConnector(builder = {
+                this.port = serverConfig.httpsPort
+                this.host = serverConfig.serverHost
+                enabledProtocols = listOf("TLSv1.3", "TLSv1.2")
+            }, keyStore = serverKeyStore, keyAlias = Constants.KEY_STORE_ALIAS, keyStorePassword = {
+                serverConfig.keyStorePassword.toCharArray()
+            }, privateKeyPassword = {
+                serverConfig.keyStorePassword.toCharArray()
+            })
 
-        // for http connections
-        connector {
-            this.port = serverConfig.httpPort
-            this.host = serverConfig.serverHost
-        }
-    }, module = Application::module).start(wait = true)
+            // for http connections
+            connector {
+                this.port = serverConfig.httpPort
+                this.host = serverConfig.serverHost
+            }
+        }, module = Application::module
+    ).start(wait = true)
 }
 
 val hostIp = try {
@@ -166,17 +167,15 @@ object ServerConfiguration {
             createConfig(forceWrite = false)
             Files.readString(configFilePath).let {
                 try {
-                    json.decodeFromString<ServerConfig>(it).let {
+                    json.decodeFromString<ServerConfig>(it).run {
                         val newKeyPassword = ServerConfig.generateAToken()
-                        it.run {
-                            if (keyStorePassword == null) {
-                                createConfig(serverConfig = it.copy(keyStorePassword = newKeyPassword))
-                            }
-                            copy(
-                                databaseUrl = "jdbc:" + it.databaseUrl,
-                                keyStorePassword = keyStorePassword ?: newKeyPassword
-                            )
+                        if (keyStorePassword == null) {
+                            createConfig(serverConfig = copy(keyStorePassword = newKeyPassword))
                         }
+                        copy(
+                            databaseUrl = "jdbc:$databaseUrl",
+                            keyStorePassword = keyStorePassword ?: newKeyPassword
+                        )
                     }
                 } catch (_: Exception) {
                     println("It seems you’ve manipulated `linkoraConfig.json` and messed things up a bit. No problemo, we’ll restart the configuration process to make sure things go smoothly.")
@@ -256,13 +255,23 @@ fun Application.module() {
         allowHeader(HttpHeaders.Authorization)
         anyHost()
     }
-    val mdManagerRepo: MarkdownManagerRepo = MarkdownManagerRepoImpl()
     val serverConfig = ServerConfiguration.readConfig()
-    configureRouting(serverConfig = serverConfig, markdownManagerRepo = mdManagerRepo)
+    configureRouting(serverConfig = serverConfig)
     install(WebSockets) {
         pingPeriod = 15.seconds
         timeout = 15.seconds
         maxFrameSize = Long.MAX_VALUE
     }
     configureEventsWebSocket()
+
+    tryAndCatch {
+        val trayImage = Toolkit.getDefaultToolkit().createImage("callahan.jpg")
+        val trayIcon = TrayIcon(trayImage)
+        SystemTray.getSystemTray().add(trayIcon)
+        trayIcon.displayMessage(
+            "Linkora",
+            "sync-server is now running v${Constants.SERVER_VERSION}!",
+            TrayIcon.MessageType.INFO
+        )
+    }
 }

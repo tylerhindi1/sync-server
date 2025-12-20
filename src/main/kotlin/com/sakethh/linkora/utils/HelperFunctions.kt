@@ -89,6 +89,20 @@ inline fun <T> tryAndCatchResult(init: () -> Result<T>): Result<T> {
     return try {
         init()
     } catch (e: Exception) {
+        e.printStackTrace()
         Result.Failure(e)
+    } catch (e: Error) {
+        e.printStackTrace()
+        Result.Failure(Exception(e.message ?: "Something went wrong"))
+    }
+}
+
+inline fun tryAndCatch(init: () -> Unit) {
+    try {
+        init()
+    } catch (e: Exception) {
+        e.printStackTrace()
+    } catch (e: Error) {
+        e.printStackTrace()
     }
 }

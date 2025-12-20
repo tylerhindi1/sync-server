@@ -35,13 +35,13 @@ import kotlin.io.path.createFile
 import kotlin.io.path.exists
 import kotlin.io.path.pathString
 
-fun Application.configureRouting(serverConfig: ServerConfig, markdownManagerRepo: MarkdownManagerRepo) {
+fun Application.configureRouting(serverConfig: ServerConfig) {
     routing {
         authenticate {
             get("/") {
                 call.respond(message = HttpStatusCode.OK, status = HttpStatusCode.OK)
             }
-            get(Route.Sync.TEST_BEARER.name) {
+            get(Route.TEST_BEARER.name) {
                 call.respond(message = HttpStatusCode.OK, status = HttpStatusCode.OK)
             }
             post(path = "/generate/certs-and-keystore") {
@@ -244,31 +244,6 @@ fun Application.configureRouting(serverConfig: ServerConfig, markdownManagerRepo
                 }
             }, contentType = ContentType.Text.Html)
         }
-
-        get(Route.Sync.SERVER_IS_CONFIGURED.name) {
-            val placeHolderValue =
-                if ((useSysEnvValues().not() && serverConfig.serverHost != InetAddress.getLocalHost().hostAddress) || (useSysEnvValues() && System.getenv(
-                        SysEnvKey.LINKORA_HOST_ADDRESS.name
-                    ) != InetAddress.getLocalHost().hostAddress)
-                ) {
-                    """### **Local Hosting & IPv4 Address**
-- If you're **hosting locally**, ensure you're using an **IPv4 address** (${InetAddress.getLocalHost().hostAddress}) as `serverHost`.
-- If using environment variables, set `${SysEnvKey.LINKORA_HOST_ADDRESS.name}` to `${InetAddress.getLocalHost().hostAddress}`.
-- Otherwise, update `serverHost` in `linkoraConfig.json` so the Android app can connect.
-- If you're **only using Linkora on Desktop**, no changes are needed."""
-                } else {
-                    ""
-                }
-            val requiredHtml = markdownManagerRepo.getRawHtmlBasedOnRawMD(
-                "The sync-server version is **${Constants.SERVER_VERSION}**.\n\nYou are currently connected to the **${
-                    Database.getDialectName(serverConfig.databaseUrl)
-                }** database, which will be **used by the server to store data**."
-            ) + markdownManagerRepo.getRawHtmlBasedOnMDFile(
-                fileLocation = "/raw/SERVER_IS_CONFIGURED.md", placeHolder = "#{PLACEHOLDER_1}" to placeHolderValue
-            )
-            call.respondText(contentType = ContentType.Text.Html, text = requiredHtml)
-        }
-
         val linksRepo: LinksRepo = LinksRepoImpl()
         val panelsRepo: PanelsRepo = PanelsRepoImpl()
         val foldersRepo: FoldersRepo = FoldersRepoImpl(panelsRepo)

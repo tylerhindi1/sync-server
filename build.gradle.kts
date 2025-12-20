@@ -50,7 +50,6 @@ dependencies {
     implementation("org.postgresql:postgresql:42.7.7")
     implementation("com.microsoft.sqlserver:mssql-jdbc:13.2.1.jre11")
     implementation("io.github.sakethpathike:kapsule:0.1.2")
-    implementation("org.jetbrains:markdown:0.7.3")
 
     implementation("io.ktor:ktor-network-tls-certificates-jvm")
 }
