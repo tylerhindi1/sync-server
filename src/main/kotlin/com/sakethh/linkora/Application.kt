@@ -270,7 +270,7 @@ fun Application.module() {
         SystemTray.getSystemTray().add(trayIcon)
         trayIcon.displayMessage(
             "Linkora",
-            "sync-server is now running v${Constants.SERVER_VERSION}!",
+            "sync-server v${Constants.SERVER_VERSION} is now running!",
             TrayIcon.MessageType.INFO
         )
     }
