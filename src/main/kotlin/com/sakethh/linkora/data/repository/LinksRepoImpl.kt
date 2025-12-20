@@ -1,14 +1,17 @@
 package com.sakethh.linkora.data.repository
 
-import com.sakethh.linkora.domain.LWWConflictException
+import com.sakethh.linkora.Constants
 import com.sakethh.linkora.domain.LinkType
+import com.sakethh.linkora.domain.MediaType
 import com.sakethh.linkora.domain.Result
 import com.sakethh.linkora.domain.Route
 import com.sakethh.linkora.domain.dto.IDBasedDTO
 import com.sakethh.linkora.domain.dto.NewItemResponseDTO
 import com.sakethh.linkora.domain.dto.TimeStampBasedResponse
+import com.sakethh.linkora.domain.dto.TwitterMetaDataDTO
 import com.sakethh.linkora.domain.dto.link.*
 import com.sakethh.linkora.domain.dto.tag.LinkTagDTO
+import com.sakethh.linkora.domain.model.ScrapedLinkInfo
 import com.sakethh.linkora.domain.model.WebSocketEvent
 import com.sakethh.linkora.domain.repository.LinksRepo
 import com.sakethh.linkora.domain.tables.LinkTagTable
@@ -16,8 +19,9 @@ import com.sakethh.linkora.domain.tables.LinksTable
 import com.sakethh.linkora.domain.tables.LinksTable.lastModified
 import com.sakethh.linkora.domain.tables.TombstoneTable
 import com.sakethh.linkora.domain.tables.helper.TombStoneHelper
-import com.sakethh.linkora.utils.checkForLWWConflictAndThrow
-import com.sakethh.linkora.utils.getSystemEpochSeconds
+import com.sakethh.linkora.utils.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToJsonElement
@@ -26,40 +30,144 @@ import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.inList
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import java.time.Instant
+import org.jsoup.Jsoup
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 
 class LinksRepoImpl : LinksRepo {
+
+
+    private suspend fun scrapeLinkData(
+        linkUrl: String, userAgent: String
+    ): ScrapedLinkInfo {
+        val linkHost: String = linkUrl.host()
+        val rawHTML = withContext(Dispatchers.IO) {
+            Jsoup.connect(
+                "http" + linkUrl.substringAfter("http").substringBefore(" ").trim()
+            ).userAgent(userAgent).followRedirects(true).header("Accept", "text/html")
+                .header("Accept-Encoding", "gzip,deflate").header("Accept-Language", "en;q=1.0")
+                .ignoreContentType(true).maxBodySize(0)
+                .ignoreHttpErrors(true).get()
+        }.toString()
+
+        val document = Jsoup.parse(rawHTML)
+        val ogImage = document.select("meta[property=og:image]").attr("content")
+        val twitterImage = document.select("meta[name=twitter:image]").attr("content")
+        val favicon = document.select("link[rel=icon]").attr("href")
+        val ogTitle = document.select("meta[property=og:title]").attr("content")
+        val pageTitle = document.title()
+
+        val imgURL = when {
+            ogImage.isNotNullOrNotBlank() -> {
+                if (ogImage.startsWith("/")) {
+                    "https://$linkHost$ogImage"
+                } else {
+                    ogImage
+                }
+            }
+
+            ogImage.isBlank() && twitterImage.isNotNullOrNotBlank() -> if (twitterImage.startsWith(
+                    "/"
+                )
+            ) {
+                "https://$linkHost$twitterImage"
+            } else {
+                twitterImage
+            }
+
+            ogImage.isBlank() && twitterImage.isBlank() && favicon.isNotNullOrNotBlank() -> {
+                if (favicon.startsWith("/")) {
+                    "https://$linkHost$favicon"
+                } else {
+                    favicon
+                }
+            }
+
+            else -> ""
+        }
+
+        val title = when {
+            ogTitle.isNotNullOrNotBlank() -> ogTitle
+            else -> pageTitle
+        }
+        return ScrapedLinkInfo(title, imgURL)
+    }
+
+    private suspend fun retrieveFromVxTwitterApi(tweetURL: String): ScrapedLinkInfo {
+        val httpRequest =
+            HttpRequest.newBuilder(URI("https://api.vxtwitter.com/${tweetURL.substringAfter(".com/")}")).build()
+
+        val vxTwitterResponseBody = withContext(Dispatchers.IO) {
+            HttpClient.newHttpClient().send(httpRequest, HttpResponse.BodyHandlers.ofString())
+                .body().run {
+                    Json.decodeFromString<TwitterMetaDataDTO>(this)
+                }
+        }
+
+        return ScrapedLinkInfo(
+            title = vxTwitterResponseBody.text,
+            imgUrl = vxTwitterResponseBody.media.takeIf { vxTwitterResponseBody.hasMedia && it.isNotEmpty() }
+                ?.find { it.type in listOf("image", "video", "gif") }
+                ?.let { if (it.type == "image") it.url else it.thumbnailUrl }
+                ?: vxTwitterResponseBody.userPfp,
+            mediaType = if (vxTwitterResponseBody.media.isNotEmpty() && vxTwitterResponseBody.media.first().type == "video") MediaType.VIDEO else MediaType.IMAGE)
+    }
+
     override suspend fun createANewLink(addLinkDTO: AddLinkDTO): Result<NewItemResponseDTO> {
         return try {
             val eventTimestamp = getSystemEpochSeconds()
-            transaction {
+
+            val addLinkDTO = if (addLinkDTO.forceRetrieveOGMetaInfo) {
+                try {
+                    val ogMetaInfo = if (addLinkDTO.url.isATwitterUrl()) {
+                        retrieveFromVxTwitterApi(addLinkDTO.url)
+                    } else {
+                        scrapeLinkData(
+                            addLinkDTO.url, addLinkDTO.userAgent ?: Constants.DEFAULT_USER_AGENT
+                        )
+                    }
+                    println("Retrieved OG:\n$ogMetaInfo")
+                    addLinkDTO.copy(
+                        title = addLinkDTO.title ?: ogMetaInfo.title,
+                        imgURL = ogMetaInfo.imgUrl,
+                        mediaType = ogMetaInfo.mediaType
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    addLinkDTO
+                }
+            } else {
+                addLinkDTO
+            }
+
+            val idOfNewlyAddedLink = transaction {
                 if (addLinkDTO.linkType == LinkType.HISTORY_LINK) {
-                    LinksTable.url.eq(addLinkDTO.url).and(LinksTable.linkType.eq(LinkType.HISTORY_LINK.name))
-                        .let { condition ->
-                            LinksTable.selectAll().where {
-                                condition
-                            }.toList().let { resultRows ->
-                                TombstoneTable.batchInsert(resultRows) {
-                                    it[TombstoneTable.deletedAt] = eventTimestamp
-                                    it[TombstoneTable.operation] = Route.DELETE_A_LINK.name
-                                    it[TombstoneTable.payload] = Json.encodeToString(
-                                        IDBasedDTO(
-                                            id = it[LinksTable.id].value,
-                                            correlation = addLinkDTO.correlation,
-                                            eventTimestamp = eventTimestamp
-                                        )
-                                    )
-                                }
-                            }
-                            LinksTable.deleteWhere {
-                                condition
-                            }
-                        }
+                    val historyLinkMatch =
+                        LinksTable.url.eq(addLinkDTO.url).and(LinksTable.linkType.eq(LinkType.HISTORY_LINK.name))
+                    val historyLinkRecords = LinksTable.selectAll().where {
+                        historyLinkMatch
+                    }.toList()
+                    TombstoneTable.batchInsert(historyLinkRecords) {
+                        it[TombstoneTable.deletedAt] = eventTimestamp
+                        it[TombstoneTable.operation] = Route.DELETE_A_LINK.name
+                        it[TombstoneTable.payload] = Json.encodeToString(
+                            IDBasedDTO(
+                                id = it[LinksTable.id].value,
+                                correlation = addLinkDTO.correlation,
+                                eventTimestamp = eventTimestamp
+                            )
+                        )
+                    }
+                    LinksTable.deleteWhere {
+                        historyLinkMatch
+                    }
                 }
                 LinksTable.insertAndGetId { link ->
                     link[lastModified] = eventTimestamp
                     link[linkType] = addLinkDTO.linkType.name
-                    link[linkTitle] = addLinkDTO.title
+                    link[linkTitle] = addLinkDTO.title ?: ""
                     link[url] = addLinkDTO.url
                     link[baseURL] = addLinkDTO.baseURL
                     link[imgURL] = addLinkDTO.imgURL
@@ -75,38 +183,37 @@ class LinksRepoImpl : LinksRepo {
                         this[LinkTagTable.tagId] = tagId
                     }
                 }
-            }.value.let { idOfNewlyAddedLink ->
-                Result.Success(
-                    response = NewItemResponseDTO(
-                        timeStampBasedResponse = TimeStampBasedResponse(
-                            message = "Link created successfully for ${addLinkDTO.linkType.name} with id = ${idOfNewlyAddedLink}.",
-                            eventTimestamp = eventTimestamp
-                        ), id = idOfNewlyAddedLink, correlation = addLinkDTO.correlation
-                    ), webSocketEvent = WebSocketEvent(
-                        operation = Route.CREATE_A_NEW_LINK.name, payload = Json.encodeToJsonElement(
-                            LinkDTO(
-                                id = idOfNewlyAddedLink,
-                                linkType = addLinkDTO.linkType,
-                                title = addLinkDTO.title,
-                                url = addLinkDTO.url,
-                                baseURL = addLinkDTO.baseURL,
-                                imgURL = addLinkDTO.imgURL,
-                                note = addLinkDTO.note,
-                                idOfLinkedFolder = addLinkDTO.idOfLinkedFolder,
-                                userAgent = addLinkDTO.userAgent,
-                                markedAsImportant = addLinkDTO.markedAsImportant,
-                                mediaType = addLinkDTO.mediaType,
-                                correlation = addLinkDTO.correlation,
-                                eventTimestamp = eventTimestamp,
-                                linkTags = addLinkDTO.tags.map {
-                                    LinkTagDTO(
-                                        linkId = idOfNewlyAddedLink, tagId = it
-                                    )
-                                })
-                        )
+            }.value
+            Result.Success(
+                response = NewItemResponseDTO(
+                    timeStampBasedResponse = TimeStampBasedResponse(
+                        message = "Link created successfully for ${addLinkDTO.linkType.name} with id = ${idOfNewlyAddedLink}.",
+                        eventTimestamp = eventTimestamp
+                    ), id = idOfNewlyAddedLink, correlation = addLinkDTO.correlation
+                ), webSocketEvent = WebSocketEvent(
+                    operation = Route.CREATE_A_NEW_LINK.name, payload = Json.encodeToJsonElement(
+                        LinkDTO(
+                            id = idOfNewlyAddedLink,
+                            linkType = addLinkDTO.linkType,
+                            title = addLinkDTO.title ?: "",
+                            url = addLinkDTO.url,
+                            baseURL = addLinkDTO.baseURL,
+                            imgURL = addLinkDTO.imgURL,
+                            note = addLinkDTO.note,
+                            idOfLinkedFolder = addLinkDTO.idOfLinkedFolder,
+                            userAgent = addLinkDTO.userAgent,
+                            markedAsImportant = addLinkDTO.markedAsImportant,
+                            mediaType = addLinkDTO.mediaType,
+                            correlation = addLinkDTO.correlation,
+                            eventTimestamp = eventTimestamp,
+                            linkTags = addLinkDTO.tags.map {
+                                LinkTagDTO(
+                                    linkId = idOfNewlyAddedLink, tagId = it
+                                )
+                            })
                     )
                 )
-            }
+            )
         } catch (e: Exception) {
             Result.Failure(e)
         }

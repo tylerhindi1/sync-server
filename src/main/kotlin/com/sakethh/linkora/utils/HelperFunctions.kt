@@ -106,3 +106,25 @@ inline fun tryAndCatch(init: () -> Unit) {
         e.printStackTrace()
     }
 }
+
+fun String.host(throwOnException: Boolean = true): String {
+    return try {
+        this.split("/")[2]
+    } catch (e: Exception) {
+        if (throwOnException) {
+            throw e
+        }
+        this
+    }
+}
+
+fun String?.isNotNullOrNotBlank(): Boolean {
+    return !this.isNullOrBlank()
+}
+
+fun String.isATwitterUrl(): Boolean {
+    return this.trim().startsWith("http://twitter.com/") or this.trim()
+        .startsWith("https://twitter.com/") or this.trim().startsWith(
+        "http://x.com/"
+    ) or this.trim().startsWith("https://x.com/")
+}

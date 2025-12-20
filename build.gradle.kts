@@ -52,6 +52,8 @@ dependencies {
     implementation("io.github.sakethpathike:kapsule:0.1.2")
 
     implementation("io.ktor:ktor-network-tls-certificates-jvm")
+
+    implementation("org.jsoup:jsoup:1.21.2")
 }
 
 tasks.named<JavaExec>("run") {

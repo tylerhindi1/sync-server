@@ -8,7 +8,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class AddLinkDTO(
     val linkType: LinkType,
-    val title: String,
+    val title: String?,
     val url: String,
     val baseURL: String,
     val imgURL: String,
@@ -19,5 +19,6 @@ data class AddLinkDTO(
     val mediaType: MediaType,
     val correlation: Correlation,
     val eventTimestamp: Long,
-    val tags: List<Long>
+    val tags: List<Long>,
+    val forceRetrieveOGMetaInfo: Boolean = false
 )
