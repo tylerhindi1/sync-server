@@ -45,7 +45,7 @@ fun LongIdTable.checkForLWWConflictAndThrow(id: Long, timeStamp: Long, lastModif
     }
 }
 
-fun FoldersTable.copy(source: List<ResultRow>, eventTimestamp: Long, parentFolderId: Long?): Map<Long, Long> {
+fun FoldersTable.insertNewFolders(source: List<ResultRow>, eventTimestamp: Long, parentFolderId: Long?): Map<Long, Long> {
     val oldToNewIdMap = mutableMapOf<Long, Long>()
     source.forEach { sourceRow ->
         val oldId = sourceRow[FoldersTable.id].value
@@ -61,7 +61,7 @@ fun FoldersTable.copy(source: List<ResultRow>, eventTimestamp: Long, parentFolde
     return oldToNewIdMap
 }
 
-fun LinksTable.copy(
+fun LinksTable.insertNewLinks(
     source: List<ResultRow>, eventTimestamp: Long, parentFolderId: Long?, newLinkType: LinkType? = null
 ): Map<Long, Long> {
     val oldToNewIdMap = mutableMapOf<Long, Long>()

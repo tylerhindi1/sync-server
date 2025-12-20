@@ -14,7 +14,8 @@ import com.sakethh.linkora.domain.tables.LinkTagTable
 import com.sakethh.linkora.domain.tables.LinksTable
 import com.sakethh.linkora.domain.tables.helper.TombStoneHelper
 import com.sakethh.linkora.utils.checkForLWWConflictAndThrow
-import com.sakethh.linkora.utils.copy
+import com.sakethh.linkora.utils.insertNewLinks
+import com.sakethh.linkora.utils.insertNewFolders
 import com.sakethh.linkora.utils.getSystemEpochSeconds
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -178,7 +179,7 @@ class MultiActionRepoImpl(
                     LinksTable.id inList copyItemsDTO.linkIds.values
                 }.toList()
 
-                globalLinksOldToNewIdsMap = LinksTable.copy(
+                globalLinksOldToNewIdsMap = LinksTable.insertNewLinks(
                     source = sourceGlobalSelectedLinks,
                     eventTimestamp = eventTimestamp,
                     parentFolderId = copyItemsDTO.newParentFolderId,
@@ -192,7 +193,7 @@ class MultiActionRepoImpl(
                     FoldersTable.id.inList(copyItemsDTO.folders.map { it.currentFolder.remoteId })
                 }.toList()
 
-                val copiedRootFolderOldToNewIdsMap = FoldersTable.copy(
+                val copiedRootFolderOldToNewIdsMap = FoldersTable.insertNewFolders(
                     source = sourceRootFolders,
                     eventTimestamp = eventTimestamp,
                     parentFolderId = copyItemsDTO.newParentFolderId
@@ -215,7 +216,7 @@ class MultiActionRepoImpl(
                         LinksTable.id.inList(folder.links.map { it.remoteId })
                     }.toList()
 
-                    val newRootFolderLinkIds = LinksTable.copy(
+                    val newRootFolderLinkIds = LinksTable.insertNewLinks(
                         source = sourceLinksOfRootFolder,
                         eventTimestamp = eventTimestamp,
                         parentFolderId = copiedRootFolderOldToNewIdsMap[folder.currentFolder.remoteId]
@@ -246,7 +247,7 @@ class MultiActionRepoImpl(
                     }.toList()
 
                     val oldToNewChildFolderMap =
-                        FoldersTable.copy(source = sourceFolders, eventTimestamp, parentFolderId)
+                        FoldersTable.insertNewFolders(source = sourceFolders, eventTimestamp, parentFolderId)
 
                     childFolders.forEach { childFolder ->
                         val oldFolderId = childFolder.currentFolder.remoteId
@@ -255,7 +256,7 @@ class MultiActionRepoImpl(
                         val sourceCurrentFolderLinks = LinksTable.selectAll().where {
                             LinksTable.id.inList(childFolder.links.map { it.remoteId })
                         }
-                        val newChildFolderLinksMap = LinksTable.copy(
+                        val newChildFolderLinksMap = LinksTable.insertNewLinks(
                             source = sourceCurrentFolderLinks.toList(),
                             eventTimestamp = eventTimestamp,
                             parentFolderId = newFolderId
