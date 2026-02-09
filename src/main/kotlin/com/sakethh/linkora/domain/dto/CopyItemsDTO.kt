@@ -10,17 +10,19 @@ data class CopyItemsDTO(
     val linkType: LinkType, val newParentFolderId: Long, val correlation: Correlation, val eventTimestamp: Long
 )
 
-
 @Serializable
 data class CopyFolderDTO(
     val currentFolder: CurrentFolder,
     val links: List<FolderLink>,
-    val childFolders: List<CopyFolderDTO>
 )
 
 @Serializable
 data class CurrentFolder(
-    val localId: Long, val remoteId: Long
+    val newlyCopiedLocalId: Long,
+    val parentOfNewlyCopiedLocalId: Long,
+    val sourceRemoteId: Long,
+    val sourceRemoteParentId: Long?,
+    val isRootFolderForTheDestination: Boolean
 )
 
 typealias FolderLink = CurrentFolder
