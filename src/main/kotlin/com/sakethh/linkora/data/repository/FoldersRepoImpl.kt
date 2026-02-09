@@ -19,7 +19,7 @@ import com.sakethh.linkora.utils.getSystemEpochSeconds
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToJsonElement
-import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.inList
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.lowerCase
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
@@ -102,45 +102,58 @@ class FoldersRepoImpl(private val panelsRepo: PanelsRepo) : FoldersRepo {
     override suspend fun deleteFolder(idBasedDTO: IDBasedDTO): Result<TimeStampBasedResponse> {
         return try {
             val eventTimestamp = getSystemEpochSeconds()
-            when (val childFolders = getChildFolders(idBasedDTO)) {
-                is Result.Failure -> {
-                    throw childFolders.exception
-                }
 
-                is Result.Success -> {
-                    childFolders.response.map { it.id }.forEach { childFolderId ->
-                        panelsRepo.deleteAFolderFromAllPanels(
-                            IDBasedDTO(
-                                id = childFolderId,
-                                correlation = idBasedDTO.correlation,
-                                eventTimestamp = idBasedDTO.eventTimestamp
-                            )
-                        )
-                        transaction {
-                            FoldersTable.deleteWhere {
-                                FoldersTable.id.eq(childFolderId)
-                            }
-                            LinksTable.deleteWhere {
-                                idOfLinkedFolder.eq(childFolderId)
-                            }
-                        }
-                        deleteFolder(idBasedDTO.copy(id = childFolderId, eventTimestamp = eventTimestamp))
-                    }
+            // i didn't use foreign keys back then, so welp, we got no other way to do this
+            // 1. we gotta delete the folder and its references
+            val foldersToDelete = mutableListOf<Long>()
+            foldersToDelete.add(idBasedDTO.id)
+
+            // 2. delete its children and the underlying tree
+            val childFoldersDeque = ArrayDeque<Folder>()
+
+            val childFolders = getChildFolders(idBasedDTO)
+            if (childFolders is Result.Success) {
+                childFoldersDeque.addAll(childFolders.response)
+            }
+
+            while (childFoldersDeque.isNotEmpty()) {
+                val currentFolder = childFoldersDeque.removeLast()
+
+                foldersToDelete.add(currentFolder.id)
+
+                val childFolders = getChildFolders(idBasedDTO.copy(id = currentFolder.id))
+                if (childFolders is Result.Success) {
+                    childFoldersDeque.addAll(childFolders.response)
                 }
             }
+
             transaction {
                 FoldersTable.deleteWhere {
-                    FoldersTable.id.eq(idBasedDTO.id)
+                    id.inList(foldersToDelete)
                 }
                 LinksTable.deleteWhere {
-                    idOfLinkedFolder.eq(idBasedDTO.id)
+                    idOfLinkedFolder.inList(foldersToDelete)
                 }
-                TombStoneHelper.insert(
-                    payload = Json.encodeToString(idBasedDTO.copy(eventTimestamp = eventTimestamp)),
-                    operation = Route.DELETE_FOLDER.name,
-                    eventTimestamp
-                )
+
+                PanelFoldersTable.deleteWhere {
+                    folderId.inList(foldersToDelete)
+                }
+
+                for (folderId in foldersToDelete) {
+                    TombStoneHelper.insert(
+                        payload = Json.encodeToString(idBasedDTO.copy(eventTimestamp = eventTimestamp, id = folderId)),
+                        operation = Route.DELETE_FOLDER.name,
+                        eventTimestamp
+                    )
+
+                    TombStoneHelper.insert(
+                        payload = Json.encodeToString(idBasedDTO.copy(eventTimestamp = eventTimestamp, id = folderId)),
+                        operation = Route.DELETE_A_FOLDER_FROM_ALL_PANELS.name,
+                        eventTimestamp
+                    )
+                }
             }
+
             Result.Success(
                 response = TimeStampBasedResponse(
                     message = "Folder and its contents have been successfully deleted.", eventTimestamp = eventTimestamp
