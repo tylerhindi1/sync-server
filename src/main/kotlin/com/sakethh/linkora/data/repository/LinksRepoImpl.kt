@@ -25,9 +25,13 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToJsonElement
+import org.jetbrains.exposed.v1.core.LongColumnType
+import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.case
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.inList
 import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.castTo
+import org.jetbrains.exposed.v1.core.longLiteral
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jsoup.Jsoup
@@ -47,9 +51,8 @@ class LinksRepoImpl : LinksRepo {
             Jsoup.connect(
                 "http" + linkUrl.substringAfter("http").substringBefore(" ").trim()
             ).userAgent(userAgent).followRedirects(true).header("Accept", "text/html")
-                .header("Accept-Encoding", "gzip,deflate").header("Accept-Language", "en;q=1.0")
-                .ignoreContentType(true).maxBodySize(0)
-                .ignoreHttpErrors(true).get()
+                .header("Accept-Encoding", "gzip,deflate").header("Accept-Language", "en;q=1.0").ignoreContentType(true)
+                .maxBodySize(0).ignoreHttpErrors(true).get()
         }.toString()
 
         val document = Jsoup.parse(rawHTML)
@@ -100,18 +103,16 @@ class LinksRepoImpl : LinksRepo {
             HttpRequest.newBuilder(URI("https://api.vxtwitter.com/${tweetURL.substringAfter(".com/")}")).build()
 
         val vxTwitterResponseBody = withContext(Dispatchers.IO) {
-            HttpClient.newHttpClient().send(httpRequest, HttpResponse.BodyHandlers.ofString())
-                .body().run {
-                    Json.decodeFromString<TwitterMetaDataDTO>(this)
-                }
+            HttpClient.newHttpClient().send(httpRequest, HttpResponse.BodyHandlers.ofString()).body().run {
+                Json.decodeFromString<TwitterMetaDataDTO>(this)
+            }
         }
 
         return ScrapedLinkInfo(
             title = vxTwitterResponseBody.text,
             imgUrl = vxTwitterResponseBody.media.takeIf { vxTwitterResponseBody.hasMedia && it.isNotEmpty() }
                 ?.find { it.type in listOf("image", "video", "gif") }
-                ?.let { if (it.type == "image") it.url else it.thumbnailUrl }
-                ?: vxTwitterResponseBody.userPfp,
+                ?.let { if (it.type == "image") it.url else it.thumbnailUrl } ?: vxTwitterResponseBody.userPfp,
             mediaType = if (vxTwitterResponseBody.media.isNotEmpty() && vxTwitterResponseBody.media.first().type == "video") MediaType.VIDEO else MediaType.IMAGE)
     }
 
@@ -119,7 +120,7 @@ class LinksRepoImpl : LinksRepo {
         return try {
             val eventTimestamp = getSystemEpochSeconds()
 
-            val addLinkDTO = if (addLinkDTO.forceRetrieveOGMetaInfo) {
+            val addLinkDTO = (if (addLinkDTO.forceRetrieveOGMetaInfo) {
                 try {
                     val ogMetaInfo = if (addLinkDTO.url.isATwitterUrl()) {
                         retrieveFromVxTwitterApi(addLinkDTO.url)
@@ -140,6 +141,8 @@ class LinksRepoImpl : LinksRepo {
                 }
             } else {
                 addLinkDTO
+            }).run {
+                copy(idOfLinkedFolder = linkType.defaultFolderId() ?: idOfLinkedFolder)
             }
 
             val idOfNewlyAddedLink = transaction {
@@ -150,9 +153,9 @@ class LinksRepoImpl : LinksRepo {
                         historyLinkMatch
                     }.toList()
                     TombstoneTable.batchInsert(historyLinkRecords) {
-                        it[TombstoneTable.deletedAt] = eventTimestamp
-                        it[TombstoneTable.operation] = Route.DELETE_A_LINK.name
-                        it[TombstoneTable.payload] = Json.encodeToString(
+                        this[TombstoneTable.deletedAt] = eventTimestamp
+                        this[TombstoneTable.operation] = Route.DELETE_A_LINK.name
+                        this[TombstoneTable.payload] = Json.encodeToString(
                             IDBasedDTO(
                                 id = it[LinksTable.id].value,
                                 correlation = addLinkDTO.correlation,
@@ -374,6 +377,7 @@ class LinksRepoImpl : LinksRepo {
                 }) {
                     it[lastModified] = eventTimestamp
                     it[linkType] = LinkType.ARCHIVE_LINK.name
+                    it[idOfLinkedFolder] = Constants.ARCHIVE_ID
                 }
             }
             Result.Success(
@@ -401,6 +405,7 @@ class LinksRepoImpl : LinksRepo {
                 }) {
                     it[lastModified] = eventTimestamp
                     it[linkType] = LinkType.SAVED_LINK.name
+                    it[idOfLinkedFolder] = Constants.SAVED_LINKS_ID
                 }
             }
             Result.Success(
@@ -489,7 +494,7 @@ class LinksRepoImpl : LinksRepo {
                     it[baseURL] = linkDTO.baseURL
                     it[imgURL] = linkDTO.imgURL
                     it[note] = linkDTO.note
-                    it[idOfLinkedFolder] = linkDTO.idOfLinkedFolder
+                    it[idOfLinkedFolder] = linkDTO.linkType.defaultFolderId() ?: linkDTO.idOfLinkedFolder
                     it[userAgent] = linkDTO.userAgent
                     it[mediaType] = linkDTO.mediaType.name
                     it[markedAsImportant] = linkDTO.markedAsImportant
@@ -556,4 +561,45 @@ class LinksRepoImpl : LinksRepo {
             Result.Failure(e)
         }
     }
+
+    override suspend fun forceSetDefaultFolderToInternalIds(): Result<TimeStampBasedResponse> {
+        val eventTimestamp = getSystemEpochSeconds()
+        return try {
+            val timeStampResponse = TimeStampBasedResponse(
+                eventTimestamp = eventTimestamp, message = "Set Default folders to internal IDs."
+            )
+
+            transaction {
+                LinksTable.update(where = {
+                    LinksTable.linkType.inList(
+                        listOf(
+                            LinkType.SAVED_LINK.name,
+                            LinkType.IMPORTANT_LINK.name,
+                            LinkType.HISTORY_LINK.name,
+                            LinkType.ARCHIVE_LINK.name
+                        )
+                    )
+                }) {
+                    it[idOfLinkedFolder] =
+                        case().When(linkType.eq(LinkType.SAVED_LINK.name), longLiteral(Constants.SAVED_LINKS_ID))
+                            .When(linkType.eq(LinkType.IMPORTANT_LINK.name), longLiteral(Constants.IMPORTANT_LINKS_ID))
+                            .When(linkType.eq(LinkType.HISTORY_LINK.name), longLiteral(Constants.HISTORY_ID))
+                            .When(linkType.eq(LinkType.ARCHIVE_LINK.name), longLiteral(Constants.ARCHIVE_ID))
+                            .Else(idOfLinkedFolder.castTo(LongColumnType()))
+
+                    it[lastModified] = eventTimestamp
+                }
+            }
+
+            Result.Success(
+                response = timeStampResponse, webSocketEvent = WebSocketEvent(
+                    operation = Route.FORCE_SET_DEFAULT_FOLDER_TO_INTERNAL_IDS.name,
+                    payload = Json.encodeToJsonElement(timeStampResponse)
+                )
+            )
+        } catch (e: Exception) {
+            Result.Failure(e)
+        }
+    }
+
 }

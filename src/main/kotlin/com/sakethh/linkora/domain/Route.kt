@@ -46,5 +46,6 @@ enum class Route {
     CREATE_TAG,
     DELETE_TAG,
     RENAME_TAG,
-    GET_TAGS
+    GET_TAGS,
+    FORCE_SET_DEFAULT_FOLDER_TO_INTERNAL_IDS
 }

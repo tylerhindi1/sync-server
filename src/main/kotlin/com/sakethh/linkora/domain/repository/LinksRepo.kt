@@ -19,4 +19,5 @@ interface LinksRepo {
     suspend fun markALinkAsNonImp(idBasedDTO: IDBasedDTO): Result<TimeStampBasedResponse>
     suspend fun updateLink(linkDTO: LinkDTO): Result<TimeStampBasedResponse>
     suspend fun deleteDuplicateLinks(deleteDuplicateLinksDTO: DeleteDuplicateLinksDTO): Result<TimeStampBasedResponse>
+    suspend fun forceSetDefaultFolderToInternalIds(): Result<TimeStampBasedResponse>
 }

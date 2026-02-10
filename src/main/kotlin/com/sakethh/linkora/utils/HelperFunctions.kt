@@ -1,5 +1,6 @@
 package com.sakethh.linkora.utils
 
+import com.sakethh.linkora.Constants
 import com.sakethh.linkora.domain.LWWConflictException
 import com.sakethh.linkora.domain.LinkType
 import com.sakethh.linkora.domain.Result
@@ -45,7 +46,20 @@ fun LongIdTable.checkForLWWConflictAndThrow(id: Long, timeStamp: Long, lastModif
     }
 }
 
-fun FoldersTable.insertNewFolders(source: List<ResultRow>, eventTimestamp: Long, parentFolderId: Long?): Map<Long, Long> {
+fun LinkType.defaultFolderId(): Long? = when (this) {
+    LinkType.SAVED_LINK -> Constants.SAVED_LINKS_ID
+    LinkType.HISTORY_LINK -> Constants.HISTORY_ID
+    LinkType.IMPORTANT_LINK -> Constants.IMPORTANT_LINKS_ID
+    LinkType.ARCHIVE_LINK -> Constants.ARCHIVE_ID
+    LinkType.FOLDER_LINK -> null
+}
+
+
+fun FoldersTable.insertNewFolders(
+    source: List<ResultRow>,
+    eventTimestamp: Long,
+    parentFolderId: Long?
+): Map<Long, Long> {
     val oldToNewIdMap = mutableMapOf<Long, Long>()
     source.forEach { sourceRow ->
         val oldId = sourceRow[FoldersTable.id].value

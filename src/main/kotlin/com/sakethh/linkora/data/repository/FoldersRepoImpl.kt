@@ -28,7 +28,7 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 
-class FoldersRepoImpl(private val panelsRepo: PanelsRepo) : FoldersRepo {
+class FoldersRepoImpl : FoldersRepo {
 
     override suspend fun createFolder(addFolderDTO: AddFolderDTO): Result<NewItemResponseDTO> {
         return try {

@@ -246,7 +246,7 @@ fun Application.configureRouting(serverConfig: ServerConfig) {
         }
         val linksRepo: LinksRepo = LinksRepoImpl()
         val panelsRepo: PanelsRepo = PanelsRepoImpl()
-        val foldersRepo: FoldersRepo = FoldersRepoImpl(panelsRepo)
+        val foldersRepo: FoldersRepo = FoldersRepoImpl()
         val syncRepo: SyncRepo = SyncRepoImpl()
         val multiActionRepo: MultiActionRepo = MultiActionRepoImpl(foldersRepo)
         val tagsRepo: TagsRepo = TagsRepoImpl()
@@ -256,6 +256,5 @@ fun Application.configureRouting(serverConfig: ServerConfig) {
         syncRouting(syncRepo)
         multiActionRouting(multiActionRepo)
         tagsRouting(tagsRepo)
-        browserExtensionRouting(foldersRepo)
     }
 }

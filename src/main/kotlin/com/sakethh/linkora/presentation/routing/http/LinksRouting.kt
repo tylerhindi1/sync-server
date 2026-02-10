@@ -6,7 +6,6 @@ import com.sakethh.linkora.domain.dto.IDBasedDTO
 import com.sakethh.linkora.domain.dto.link.*
 import com.sakethh.linkora.domain.repository.LinksRepo
 import com.sakethh.linkora.utils.respondWithResult
-import io.ktor.server.application.*
 import io.ktor.server.routing.*
 
 fun Routing.linksRouting(linksRepo: LinksRepo) {
@@ -66,5 +65,10 @@ fun Routing.linksRouting(linksRepo: LinksRepo) {
         post<DeleteDuplicateLinksDTO>(Route.DELETE_DUPLICATE_LINKS.name) {
             respondWithResult(linksRepo.deleteDuplicateLinks(it))
         }
+
+        get(Route.FORCE_SET_DEFAULT_FOLDER_TO_INTERNAL_IDS.name) {
+            respondWithResult(linksRepo.forceSetDefaultFolderToInternalIds())
+        }
+
     }
 }
