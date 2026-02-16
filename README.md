@@ -10,14 +10,6 @@ For a complete guide on installation, configuration, deployment, and troubleshoo
 
 The documentation site is built with [Genesis](https://github.com/sakethpathike/genesis).
 
----
-
-## Support
-
-**Star the repo** if you find Linkora useful.
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/sakethpathike)
-
 ## Community
 
 [![Join us on Discord](https://discord.com/api/guilds/1214971383352664104/widget.png?style=banner2)](https://discord.gg/ZDBXNtv8MD)
