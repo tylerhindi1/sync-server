@@ -37,6 +37,9 @@ import kotlin.io.path.pathString
 
 fun Application.configureRouting(serverConfig: ServerConfig) {
     routing {
+        get("/health") {
+             call.respond(message = HttpStatusCode.OK, status = HttpStatusCode.OK)
+        }
         authenticate {
             get("/") {
                 call.respond(message = HttpStatusCode.OK, status = HttpStatusCode.OK)
